@@ -1,70 +1,98 @@
-// import Cerebras from "@cerebras/cerebras_cloud_sdk";
-// import dotenv from "dotenv";
-// dotenv.config();
+// LLamaFunctions.js
+import Groq from "groq-sdk";
 
-// const client = new Cerebras({
-//   apiKey: process.env["CEREBRAS_API_KEY"], // This is the default and can be omitted
-// });
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY, // Load your Groq API key from environment variables
+});
 
-// export async function getDatabaseRow(pageTitle, tags) {
-//   console.log(`Processing pageTitle: ${pageTitle} with tags:`, tags);
+export const getDatabaseRow = async (pageTitle, tags) => {
+  console.log(`Processing pageTitle: ${pageTitle} with tags:`, tags);
+  const today = new Date().toISOString().split("T")[0]; // Format: YYYY-MM-DD
 
-//   const notionPrompt = ```
-// You are a task parser designed to extract structured information from natural language input. Your goal is to:
+  const messages = [
+    {
+      role: "system",
+      content: `
+      You are a task parser designed to create structured data for a Notion page. Your goal is to:
 
-// 1. Analyze the pageTitle to extract meaningful information about the task, such as the core summary and the deadline.
-// 2. Match the tags from the provided list that are relevant to the task in the pageTitle.
-// 3. Output the result as a structured JSON object suitable for patching a Notion database entry.
+      1. Analyze the pageTitle to extract a clear and concise summary of the task.
+      2. Identify relevant tags from the provided list based on context in the pageTitle.
+      3. Extract any deadline mentioned in the pageTitle and format it as an ISO 8601 date (e.g., "2025-01-31"). If no deadline is found, set "deadline": null.
+      4. Output a JSON object in a format directly usable for Notion's API.
+    5. tasks with "get" could be categorized into travel tag
+    6. today's date is ${today}, any date relative should be that, if no deadline provide, just use ${today} for start date
+      **Output JSON Format:**
+    {
+        "Tasks": {
+            "title": [
+            {
+                "type": "text",
+                "text": {
+                "content": "Insert summary of the title, fix grammar",
+                }
+            }
+            ]
+        },
+        "Type": {
+            "multi_select": [
+            { "name": "Tag1" },
+            { "name": "Tag2" }
+            ]
+        },
+        "deadline": {
+            "date": {
+            "start": "2024-03-16", // ISO 8601 format
+            "end": null            // Optional, use null if not applicable
+            }
+        },
+        "Status Update": {
+            "status": {
+            "name": "Not started" // Must match the exact status name in your database schema
+            }
+        }
+    };
 
-// **Output JSON Format:**
-// {
-//   "summary_title": "<Short and clear summary of the task>",
-//   "tags": [
-//     {
-//       "id": "<Tag ID>",
-//       "name": "<Tag Name>",
-//       "color": "<Tag Color>"
-//     }
-//   ],
-//   "deadline": "<ISO 8601 formatted date or null if not found>"
-// }
+      Ensure the output JSON is properly formatted without additional text or code blocks.
+      `,
+    },
+    {
+      role: "user",
+      content: `
+      Input:
+      1. pageTitle: "${pageTitle}"
+      2. tags: ${JSON.stringify(tags)}
 
-// **Guidelines:**
-// - Extract tags from the provided tags list. Match based on keywords or context from the pageTitle.
-// - Parse the pageTitle for any deadline-related phrases (e.g., "by January 20th" or "due tomorrow") and convert the deadline into ISO 8601 format (e.g., "2025-01-20").
-// - If no deadline is found, set "deadline": null".
-// - Ensure the output JSON matches the specified format, with valid keys and values.
+      Your task:
+      - Generate a valid JSON object matching the specified format for Notion's API.
+      - Include only the relevant tags and deadline, if found.
+      - Return a clean JSON object as the output.
+      `,
+    },
+  ];
 
-// **Input:**
-// 1. pageTitle: "${pageTitle}"
-// 2. tags: ${tags}
+  try {
+    const chatCompletion = await groq.chat.completions.create({
+      messages,
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.5,
+      max_completion_tokens: 1024,
+      top_p: 1,
+      stop: null,
+      stream: false,
+    });
 
-// **Your task:**
-// 1. Understand the intention of the task from the pageTitle.
-// 2. Select and include relevant tags from the tags list.
-// 3. Extract and format the deadline, if present, or return null.
-// 4. Output a valid JSON object in the specified format.
+    const rawResult = chatCompletion.choices[0]?.message?.content || "";
+    const cleanResult = rawResult.trim().replace(/^```json|```$/g, "");
+    const parsedResult = JSON.parse(cleanResult);
 
-// ```;
-
-//   try {
-//     // Call the Cerebras API
-//     const completion = await client.completions.create({
-//       prompt: notionPrompt,
-//       model: "llama3.1-8b", // Use the appropriate model
-//     });
-
-//     const result = completion?.choices?.[0]?.text;
-
-//     // Log and return the result from the Cerebras API
-//     console.log("Cerebras API completion result:", result);
-//     return {
-//       analysis: result,
-//     };
-//   } catch (error) {
-//     console.error("Error calling Cerebras API:", error.message);
-//     return {
-//       analysis: "Error in processing",
-//     };
-//   }
-// }
+    console.log("Groq API completion result (parsed):", parsedResult);
+    return parsedResult;
+  } catch (error) {
+    console.error("Error calling Groq API:", error.message);
+    return {
+      summary_title: "Error in processing",
+      tags: [],
+      deadline: null,
+    };
+  }
+};
