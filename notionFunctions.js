@@ -1,6 +1,8 @@
 // notionFunctions.js
 import axios from "axios";
+import dotenv from "dotenv";
 
+dotenv.config();
 const NOTION_API_KEY = process.env.NOTION_API_KEY;
 const notion = axios.create({
   baseURL: "https://api.notion.com/v1/",

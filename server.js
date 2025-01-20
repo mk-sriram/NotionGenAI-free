@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import express from "express";
 import bodyParser from "body-parser";
-import { getDatabaseTags, updatePage } from "./notionFunctions";
-import { getDatabaseRow } from "./LLamaFunctions";
+import { getDatabaseTags, updatePage } from "./notionFunctions.js";
+import { getDatabaseRow } from "./LLamaFunctions.js";
 
 // Load environment variables
 dotenv.config();
