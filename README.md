@@ -16,7 +16,7 @@ Notion AI charges $100/year for functionality that can be achieved with a few li
 
 ## Demo Video
 <a href="https://www.youtube.com/watch?v=DlthUbGrWk4" target="_blank">
-  <img src="https://img.youtube.com/vi/DlthUbGrWk4/maxresdefault.jpg" alt="Video Demo" width="400" />
+  <img src="https://www.youtube.com/watch?v=DlthUbGrWk4" alt="Video Demo" width="400" />
 </a>
 
 
